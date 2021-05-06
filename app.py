@@ -1,15 +1,40 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request, flash, redirect
+import config, csv, talib
+from binance.client import Client
+from binance.enums import *
 
 app = Flask(__name__)
+app.secret_key = config.FLASK_SECRET_KEY
+
+client = Client(config.API_KEY, config.API_SECRET)
 
 @app.route('/')
 def index():
     title = 'CoinView'
-    return render_template('Index.html', title=title)
 
-@app.route('/buy')
+    account_info = client.get_account()
+
+    balances = account_info['balances']
+
+    exchange_info = client.get_exchange_info()
+    symbols = exchange_info['symbols']
+
+    return render_template('Index.html', title=title, my_balances=balances, symbols=symbols)
+
+@app.route('/buy', methods=['POST'])
 def buy():
-    return 'buy'
+    print(request.form)
+
+    try:
+        order = client.create_order(
+                symbol=request.form['symbol'],
+                side=SIDE_BUY,
+                type=ORDER_TYPE_MARKET,
+                quantity=request.form['quantity'])
+    except Exception as e:
+        flash(e.message, 'error')
+
+    return redirect('/')
 
 @app.route('/sell')
 def sell():
